@@ -3,24 +3,18 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-// Bubble Sort (Parent)
 void bubbleSort(int arr[], int n)
 {
     for (int i = 0; i < n - 1; i++)
-    {
         for (int j = 0; j < n - i - 1; j++)
-        {
             if (arr[j] > arr[j + 1])
             {
                 int temp = arr[j];
                 arr[j] = arr[j + 1];
                 arr[j + 1] = temp;
             }
-        }
-    }
 }
 
-// Insertion Sort (Child)
 void insertionSort(int arr[], int n)
 {
     for (int i = 1; i < n; i++)
@@ -36,7 +30,6 @@ void insertionSort(int arr[], int n)
     }
 }
 
-// Print array
 void printArray(const char *label, int arr[], int n)
 {
     printf("%s", label);
@@ -58,7 +51,7 @@ int main()
 
     printf("\nOriginal Array: ");
     printArray("", arr, n);
-    printf("--------------------------------------------------\n");
+    printf("-----------------------------------------\n");
 
     pid_t pid = fork();
 
@@ -68,15 +61,25 @@ int main()
         return 1;
     }
 
-    // ---------------- CHILD PROCESS ----------------
     else if (pid == 0)
     {
-        printf("\n--- CHILD PROCESS (PID: %d) ---\n", getpid());
-        printf("Child: Using Insertion Sort\n");
+        // ---------------- ZOMBIE PROCESS DEMO ----------------
+        // Uncomment this block to run zombie example
 
+        /*
+        printf("\n--- CHILD PROCESS (PID: %d) ---\n", getpid());
         insertionSort(arr, n);
         printArray("Child: Sorted Array: ", arr, n);
+        printf("Child: Exiting immediately to become ZOMBIE.\n");
+        exit(0);
+        */
 
+        // ---------------- ORPHAN PROCESS DEMO ----------------
+        // Uncomment this block to run orphan example
+
+        printf("\n--- CHILD PROCESS (PID: %d) ---\n", getpid());
+        insertionSort(arr, n);
+        printArray("Child: Sorted Array: ", arr, n);
         printf("Child: Sleeping 10 seconds to show ORPHAN state if parent exits early...\n");
         sleep(10);
         printf("Child: Woke up, current parent PID: %d\n", getppid());
@@ -84,31 +87,37 @@ int main()
         exit(0);
     }
 
-    // ---------------- PARENT PROCESS ----------------
     else
     {
-        printf("\n--- PARENT PROCESS (PID: %d) ---\n", getpid());
-        printf("Parent: Created a child with PID %d\n", pid);
-        printf("Parent: Using Bubble Sort\n");
+        // ---------------- ZOMBIE PROCESS DEMO ----------------
+        // Uncomment this block to run zombie example
 
+        /*
+        printf("\n--- PARENT PROCESS (PID: %d) ---\n", getpid());
+        printf("Parent: Created child with PID %d\n", pid);
         bubbleSort(arr, n);
         printArray("Parent: Sorted Array: ", arr, n);
 
-        // --- ZOMBIE DEMONSTRATION ---
-        printf("\nParent: Sleeping 10 seconds (child will finish and become ZOMBIE)...\n");
-        printf("Run 'ps -elf | grep %d' in another terminal to see zombie state.\n", pid);
-        sleep(10);
+        printf("\nParent: Sleeping 15 seconds...\n");
+        printf("During this time, child (PID: %d) will be a ZOMBIE.\n", pid);
+        printf("Run this in another terminal:\n");
+        printf("ps -elf | grep %d\n", pid);
+
+        sleep(15);
 
         printf("\nParent: Woke up, calling wait() to remove zombie.\n");
         wait(NULL);
         printf("Parent: Child process reaped (Zombie removed).\n");
+        */
 
-        // --- ORPHAN DEMONSTRATION ---
-        printf("\nParent: Sleeping 3 seconds, then exiting before child wakes up.\n");
-        printf("After parent exits, run 'ps -elf | grep %d' to see child adopted by init.\n", pid);
-        sleep(3);
+        // ---------------- ORPHAN PROCESS DEMO ----------------
+        // Uncomment this block to run orphan example
 
-        printf("Parent: Exiting now. Child will become orphan if still running.\n");
+        printf("\n--- PARENT PROCESS (PID: %d) ---\n", getpid());
+        printf("Parent: Created child with PID %d\n", pid);
+        bubbleSort(arr, n);
+        printArray("Parent: Sorted Array: ", arr, n);
+        printf("Parent: Exiting immediately — child will become ORPHAN.\n");
         exit(0);
     }
 
