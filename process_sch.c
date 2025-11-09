@@ -1,215 +1,138 @@
-#include <stdio.h>
+#include <stdio.h>#include <stdio.h>
 #include <stdlib.h>
 
-struct process
-{
-    int pid;
-    int at;
-    int bt;
-    int ct;
-    int tat;
-    int wt;
-    int completed;
+struct process {
+    int pid, at, bt, ct, tat, wt, completed;
 };
 
-void printResults(struct process p[], int n, const char *algoName)
-{
-    float total_tat = 0.0;
-    float total_wt = 0.0;
-
-    printf("\nResults for %s\n", algoName);
+void printResults(struct process p[], int n, const char *algo, int gantt[], int gcount) {
+    float total_tat = 0, total_wt = 0;
+    printf("\nResults for %s\n", algo);
     printf("PID\tAT\tBT\tCT\tTAT\tWT\n");
-    printf(".......................................\n");
-
-    for (int i = 0; i < n; i++)
-    {
+    printf("-----------------------------------\n");
+    for (int i = 0; i < n; i++) {
         p[i].tat = p[i].ct - p[i].at;
         p[i].wt = p[i].tat - p[i].bt;
-
-        printf("P%d\t%d\t%d\t%d\t%d\t%d\n",
-               p[i].pid, p[i].at, p[i].bt, p[i].ct, p[i].tat, p[i].wt);
-
         total_tat += p[i].tat;
         total_wt += p[i].wt;
+        printf("P%d\t%d\t%d\t%d\t%d\t%d\n", p[i].pid, p[i].at, p[i].bt, p[i].ct, p[i].tat, p[i].wt);
     }
+    printf("-----------------------------------\n");
+    printf("Average TAT: %.2f\n", total_tat / n);
+    printf("Average WT : %.2f\n", total_wt / n);
 
-    printf(".................................................\n");
-    printf("Average Turn Around Time : %.2f\n", total_tat / n);
-    printf("Average Waiting Time : %.2f\n", total_wt / n);
+    printf("\nGantt Chart:\n|");
+    for (int i = 0; i < gcount; i++) printf(" P%d |", gantt[i]);
+    printf("\n");
 }
 
-void run_fcfs(struct process p[], int n)
-{
-    struct process temp_p[20], temp_swap;
-    for (int i = 0; i < n; i++)
-        temp_p[i] = p[i];
+void fcfs(struct process p[], int n) {
+    struct process temp[20], t;
+    int gantt[50], g = 0;
+    for (int i = 0; i < n; i++) temp[i] = p[i];
 
     for (int i = 0; i < n - 1; i++)
         for (int j = 0; j < n - i - 1; j++)
-            if (temp_p[j].at > temp_p[j + 1].at)
-            {
-                temp_swap = temp_p[j];
-                temp_p[j] = temp_p[j + 1];
-                temp_p[j + 1] = temp_swap;
+            if (temp[j].at > temp[j + 1].at) {
+                t = temp[j]; temp[j] = temp[j + 1]; temp[j + 1] = t;
             }
 
-    int currenttime = 0;
-    for (int i = 0; i < n; i++)
-    {
-        if (currenttime < temp_p[i].at)
-            currenttime = temp_p[i].at;
-
-        temp_p[i].ct = currenttime + temp_p[i].bt;
-        currenttime = temp_p[i].ct;
+    int time = 0;
+    for (int i = 0; i < n; i++) {
+        if (time < temp[i].at) time = temp[i].at;
+        time += temp[i].bt;
+        temp[i].ct = time;
+        gantt[g++] = temp[i].pid;
     }
-
-    printResults(temp_p, n, "FCFS");
+    printResults(temp, n, "FCFS", gantt, g);
 }
 
-void sjf(struct process p[], int n)
-{
-    int currenttime = 0, completed_process = 0;
-    struct process temp_p[20];
+void sjf(struct process p[], int n) {
+    struct process temp[20];
+    int gantt[50], g = 0;
+    for (int i = 0; i < n; i++) { temp[i] = p[i]; temp[i].completed = 0; }
+    int completed = 0, time = 0;
 
-    for (int i = 0; i < n; i++)
-    {
-        temp_p[i] = p[i];
-        temp_p[i].completed = 0;
-    }
-
-    while (completed_process < n)
-    {
-        int shortest_job_ind = -1;
-        int shortest_bt = 999;
-
+    while (completed < n) {
+        int idx = -1, min_bt = 999;
         for (int i = 0; i < n; i++)
-            if (temp_p[i].at <= currenttime && temp_p[i].completed == 0 && temp_p[i].bt < shortest_bt)
-            {
-                shortest_bt = temp_p[i].bt;
-                shortest_job_ind = i;
-            }
+            if (temp[i].at <= time && !temp[i].completed && temp[i].bt < min_bt)
+                { min_bt = temp[i].bt; idx = i; }
 
-        if (shortest_job_ind == -1)
-        {
-            int next_arrival = 9999;
-            for (int i = 0; i < n; i++)
-                if (temp_p[i].completed == 0 && temp_p[i].at < next_arrival)
-                    next_arrival = temp_p[i].at;
-
-            currenttime = next_arrival;
-        }
-        else
-        {
-            int i = shortest_job_ind;
-            temp_p[i].ct = currenttime + temp_p[i].bt;
-            currenttime = temp_p[i].ct;
-            temp_p[i].completed = 1;
-            completed_process++;
+        if (idx == -1) time++;
+        else {
+            time += temp[idx].bt;
+            temp[idx].ct = time;
+            temp[idx].completed = 1;
+            gantt[g++] = temp[idx].pid;
+            completed++;
         }
     }
-
-    printResults(temp_p, n, "SJF Non-Premptive");
+    printResults(temp, n, "SJF Non-Preemptive", gantt, g);
 }
 
-void round_robin(struct process p[], int n, int tq)
-{
-    struct process temp_p[20];
-    int rem_bt[20];
-    int currenttime = 0, completed = 0;
-
-    for (int i = 0; i < n; i++)
-    {
-        temp_p[i] = p[i];
+void round_robin(struct process p[], int n, int tq) {
+    struct process temp[20];
+    int rem_bt[20], gantt[100], g = 0;
+    for (int i = 0; i < n; i++) {
+        temp[i] = p[i];
         rem_bt[i] = p[i].bt;
-        temp_p[i].completed = 0;
+        temp[i].completed = 0;
     }
+    int time = 0, done;
 
-    while (completed < n)
-    {
-        int done = 1;
-        for (int i = 0; i < n; i++)
-        {
-            if (rem_bt[i] > 0 && temp_p[i].at <= currenttime)
-            {
+    while (1) {
+        done = 1;
+        for (int i = 0; i < n; i++) {
+            if (rem_bt[i] > 0 && temp[i].at <= time) {
                 done = 0;
-                if (rem_bt[i] > tq)
-                {
-                    currenttime += tq;
+                if (rem_bt[i] > tq) {
+                    time += tq;
                     rem_bt[i] -= tq;
-                }
-                else
-                {
-                    currenttime += rem_bt[i];
+                    gantt[g++] = temp[i].pid;
+                } else {
+                    time += rem_bt[i];
                     rem_bt[i] = 0;
-                    temp_p[i].ct = currenttime;
-                    temp_p[i].completed = 1;
-                    completed++;
+                    temp[i].ct = time;
+                    gantt[g++] = temp[i].pid;
                 }
             }
         }
-
-        if (done)
-        {
-            int next_arrival = 9999;
-            for (int i = 0; i < n; i++)
-                if (rem_bt[i] > 0 && temp_p[i].at < next_arrival)
-                    next_arrival = temp_p[i].at;
-            if (next_arrival != 9999)
-                currenttime = next_arrival;
-        }
+        if (done) break;
     }
-
-    printResults(temp_p, n, "Round Robin");
+    printResults(temp, n, "Round Robin", gantt, g);
 }
 
-int main()
-{
+int main() {
     int n, choice, tq;
     struct process proc[20];
-    printf("ENTER THE NUMBER OF PROCESS::\n");
-    scanf("%d", &n);
 
-    printf("Enter the Process Details (AT = Arrival Time, BT = Burst Time):\n");
-    for (int i = 0; i < n; i++)
-    {
+    printf("Enter number of processes: ");
+    scanf("%d", &n);
+    for (int i = 0; i < n; i++) {
         proc[i].pid = i + 1;
-        printf("Process P%d AT: ", i + 1);
+        printf("P%d Arrival Time: ", i + 1);
         scanf("%d", &proc[i].at);
-        printf("Process P%d BT: ", i + 1);
+        printf("P%d Burst Time: ", i + 1);
         scanf("%d", &proc[i].bt);
-        proc[i].completed = 0;
     }
 
-    while (1)
-    {
-        printf("\n..............................................\n");
-        printf("CPU Scheduling Menu\n");
-        printf("1. FCFS\n");
-        printf("2. SJF (Non-Premptive)\n");
-        printf("3. Round Robin\n");
-        printf("4. Exit\n");
-        printf("..............................................\n");
+    while (1) {
+        printf("\nCPU Scheduling Menu\n");
+        printf("1. FCFS\n2. SJF (Non-Preemptive)\n3. Round Robin\n4. Exit\n");
         printf("Enter your choice: ");
         scanf("%d", &choice);
 
-        switch (choice)
-        {
-        case 1:
-            run_fcfs(proc, n);
-            break;
-        case 2:
-            sjf(proc, n);
-            break;
-        case 3:
+        if (choice == 1) fcfs(proc, n);
+        else if (choice == 2) sjf(proc, n);
+        else if (choice == 3) {
             printf("Enter Time Quantum: ");
             scanf("%d", &tq);
             round_robin(proc, n, tq);
-            break;
-        case 4:
-            exit(0);
-        default:
-            printf("Invalid Choice!\n");
         }
+        else if (choice == 4) exit(0);
+        else printf("Invalid choice!\n");
     }
     return 0;
 }
+
