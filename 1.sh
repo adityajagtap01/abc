@@ -71,21 +71,4 @@ do
     echo
     read -p "Press Enter to continue..."
     clear
-done            grep -iv "$del" "$phonebook" > temp.txt && mv temp.txt "$phonebook"
-            echo "Contact deleted successfully."
-            ;;
-
-        6)
-            echo "Exiting program."
-            exit 0
-            ;;
-
-        *)
-            echo "Invalid choice. Try again."
-            ;;
-    esac
-
-    echo
-    read -p "Press Enter to continue..."
-    clear
-done
+done      
